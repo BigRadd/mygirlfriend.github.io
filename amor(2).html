@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Para Ti</title>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,300;1,400;1,500&family=Jost:wght@200;300;400&display=swap" rel="stylesheet">
+<style>
+
+/* ── RESET & BASE ─────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --c-bg:       #0e0b0d;
+  --c-surface:  #141014;
+  --c-rose:     #c4566a;
+  --c-rose-lt:  #e07a8f;
+  --c-gold:     #b8904a;
+  --c-cream:    #f0e8e4;
+  --c-dim:      rgba(240,232,228,0.38);
+  --c-dimmer:   rgba(240,232,228,0.18);
+  --glass:      rgba(255,255,255,0.03);
+  --glass-b:    rgba(255,255,255,0.07);
+  --r: 2px;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--c-bg);
+  color: var(--c-cream);
+  font-family: 'Jost', sans-serif;
+  font-weight: 300;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: rgba(196,86,106,0.25); }
+
+::-webkit-scrollbar { width: 1px; }
+::-webkit-scrollbar-thumb { background: var(--c-rose); }
+
+/* ── SUBTLE GRAIN OVERLAY ─────────────────────── */
+body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 9000;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 160px;
+}
+
+/* ── MUSIC PLAYER ─────────────────────────────── */
+.player {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 800;
+  height: 56px;
+  display: flex; align-items: center;
+  padding: 0 32px; gap: 20px;
+  background: rgba(14,11,13,0.82);
+  backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px);
+  border-bottom: 1px solid rgba(255,255,255,0.055);
+}
+
+.disc {
+  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  background: conic-gradient(var(--c-rose) 0%, var(--c-gold) 45%, var(--c-rose) 100%);
+  display: flex; align-items: center; justify-content: center;
+  animation: spin 9s linear infinite paused;
+  position: relative;
+}
+.disc::after {
+  content: ''; position: absolute;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--c-bg);
+}
+.disc.on { animation-play-state: running; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.p-meta { flex: 1; min-width: 0; }
+.p-name {
+  font-family: 'EB Garamond', serif;
+  font-style: italic; font-size: 0.88rem;
+  color: var(--c-cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  opacity: 0.85;
+}
+.p-sub { font-size: 0.48rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--c-dim); margin-top: 2px; }
+
+.p-bar-wrap {
+  flex: 1; max-width: 180px; display: none; flex-direction: column; gap: 4px;
+}
+.p-bar {
+  height: 1px; background: rgba(255,255,255,0.1);
+  position: relative; cursor: pointer;
+}
+.p-fill { position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: var(--c-rose); transition: width 0.2s; }
+.p-times { display: flex; justify-content: space-between; font-size: 0.48rem; color: var(--c-dimmer); }
+
+.p-btn {
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: transparent; color: var(--c-cream);
+  cursor: pointer; font-size: 0.68rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color 0.2s, background 0.2s;
+  flex-shrink: 0;
+}
+.p-btn:hover { border-color: var(--c-rose); background: rgba(196,86,106,0.12); }
+
+.p-vol { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+.p-vol span { font-size: 0.65rem; color: var(--c-dimmer); }
+input[type=range] {
+  -webkit-appearance: none; width: 52px; height: 1px;
+  background: rgba(255,255,255,0.12); outline: none; cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 8px; height: 8px;
+  border-radius: 50%; background: var(--c-cream); cursor: pointer;
+}
+
+/* ── EMOJI RAIN ─────────────────────────────────── */
+#rain {
+  position: fixed; inset: 0; z-index: 1;
+  pointer-events: none; overflow: hidden;
+}
+.drop {
+  position: absolute; top: -40px; opacity: 0;
+  animation: rainfall linear infinite;
+  font-size: 0.95rem;
+  filter: opacity(0.55);
+}
+@keyframes rainfall {
+  0%   { transform: translateY(0) rotate(-8deg); opacity: 0; }
+  6%   { opacity: 1; }
+  92%  { opacity: 0.4; }
+  100% { transform: translateY(105vh) rotate(8deg); opacity: 0; }
+}
+
+/* ── SCROLL REVEAL ───────────────────────────────── */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(36px);
+  transition: opacity 1s var(--ease), transform 1s var(--ease);
+}
+[data-reveal="left"]  { transform: translateX(-40px); }
+[data-reveal="right"] { transform: translateX(40px); }
+[data-reveal].in { opacity: 1 !important; transform: none !important; }
+.d1 { transition-delay: 0.1s; }
+.d2 { transition-delay: 0.22s; }
+.d3 { transition-delay: 0.34s; }
+.d4 { transition-delay: 0.46s; }
+.d5 { transition-delay: 0.58s; }
+.d6 { transition-delay: 0.70s; }
+
+/* ══════════════════════════════════════════════════
+   SECTION 1 — HERO
+══════════════════════════════════════════════════ */
+.s-hero {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+  padding: 80px 48px 0;
+}
+
+/* Ambient background — no gradients stacking, just a vignette + two soft pools of light */
+.s-hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 65% 55% at 72% 18%, rgba(196,86,106,0.14) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 45% at 18% 82%, rgba(184,144,74,0.08) 0%, transparent 58%);
+  pointer-events: none;
+}
+
+.hero-inner {
+  position: relative; z-index: 2;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px; align-items: center;
+  max-width: 1100px; width: 100%;
+}
+
+/* Left — text */
+.hero-text {}
+
+.hero-label {
+  font-size: 0.55rem; letter-spacing: 0.5em; text-transform: uppercase;
+  color: var(--c-gold); margin-bottom: 24px;
+  opacity: 0; animation: fadeUp 1s 0.4s var(--ease) forwards;
+}
+
+.hero-h1 {
+  font-family: 'EB Garamond', serif;
+  font-size: clamp(3.2rem, 5.5vw, 5.8rem);
+  font-style: italic; font-weight: 400;
+  line-height: 1.02;
+  color: var(--c-cream);
+  margin-bottom: 28px;
+  opacity: 0; animation: fadeUp 1s 0.55s var(--ease) forwards;
+  /* Very restrained — no gradients on the title */
+}
+
+.hero-h1 em {
+  font-style: normal;
+  color: var(--c-rose-lt);
+}
+
+.hero-p {
+  font-size: 0.88rem; line-height: 1.9;
+  color: var(--c-dim); max-width: 360px;
+  margin-bottom: 44px;
+  opacity: 0; animation: fadeUp 1s 0.7s var(--ease) forwards;
+}
+
+.hero-date {
+  display: inline-flex; align-items: center; gap: 10px;
+  opacity: 0; animation: fadeUp 1s 0.85s var(--ease) forwards;
+}
+.hero-date-line { width: 32px; height: 1px; background: var(--c-rose); }
+.hero-date-text { font-size: 0.6rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--c-rose-lt); }
+
+/* Right — large decorative initial / number */
+.hero-deco {
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  opacity: 0; animation: fadeUp 1.1s 0.6s var(--ease) forwards;
+}
+
+
+
+.hero-deco-char {
+  font-family: 'EB Garamond', serif; font-style: italic;
+  font-size: clamp(6rem, 12vw, 11rem); font-weight: 400;
+  color: rgba(196,86,106,0.22);
+  line-height: 1; user-select: none;
+}
+
+/* Scroll indicator */
+.scroll-indicator {
+  position: absolute; bottom: 40px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  opacity: 0; animation: fadeUp 1s 1.2s var(--ease) forwards;
+  z-index: 2;
+}
+.scroll-indicator span { font-size: 0.46rem; letter-spacing: 0.36em; text-transform: uppercase; color: var(--c-dimmer); }
+.scroll-line {
+  width: 1px; height: 52px;
+  background: linear-gradient(180deg, var(--c-rose), transparent);
+  animation: scrollPulse 2s ease-in-out infinite;
+}
+@keyframes scrollPulse { 0%,100%{opacity:0.3;} 50%{opacity:1;} }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ══════════════════════════════════════════════════
+   SECTION 2 — COUNTER
+══════════════════════════════════════════════════ */
+.s-counter {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; padding: 120px 48px;
+  overflow: hidden;
+}
+.s-counter::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 50%, rgba(196,86,106,0.07) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.counter-wrap { position: relative; z-index: 1; text-align: center; max-width: 900px; width: 100%; }
+
+.s-label {
+  font-size: 0.52rem; letter-spacing: 0.46em; text-transform: uppercase;
+  color: var(--c-gold); margin-bottom: 14px; display: block;
+}
+.s-title {
+  font-family: 'EB Garamond', serif; font-style: italic;
+  font-size: clamp(2.2rem, 5vw, 4rem); font-weight: 400;
+  color: var(--c-cream); margin-bottom: 64px;
+  line-height: 1.15;
+}
+
+.counter-row {
+  display: flex; justify-content: center;
+  gap: 2px; flex-wrap: nowrap;
+}
+
+.c-unit {
+  flex: 1; max-width: 130px;
+  padding: 32px 16px 24px;
+  background: var(--glass);
+  border: 1px solid var(--glass-b);
+  position: relative;
+  transition: background 0.3s;
+}
+.c-unit:first-child { border-radius: 12px 0 0 12px; }
+.c-unit:last-child  { border-radius: 0 12px 12px 0; }
+.c-unit:hover { background: rgba(196,86,106,0.05); }
+
+/* Top edge glow only on hover */
+.c-unit::after {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: var(--c-rose);
+  transform: scaleX(0); transition: transform 0.4s var(--ease);
+  transform-origin: left;
+}
+.c-unit:hover::after { transform: scaleX(1); }
+
+.c-n {
+  font-family: 'EB Garamond', serif; font-size: clamp(2.4rem, 4vw, 3.2rem);
+  font-weight: 400; color: var(--c-cream); display: block; line-height: 1;
+  letter-spacing: -0.02em;
+}
+.c-l {
+  font-size: 0.46rem; letter-spacing: 0.28em; text-transform: uppercase;
+  color: var(--c-dim); margin-top: 10px; display: block;
+}
+
+/* Separator between units */
+.c-sep {
+  width: 1px; background: rgba(255,255,255,0.06);
+  align-self: stretch; flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════
+   SECTION 3 — PHOTOS
+══════════════════════════════════════════════════ */
+.s-photos {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; padding: 120px 48px;
+  overflow: hidden;
+}
+.s-photos::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 80% 30%, rgba(184,144,74,0.06) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 20% 70%, rgba(196,86,106,0.07) 0%, transparent 55%);
+  pointer-events: none;
+}
+
+.photos-inner {
+  position: relative; z-index: 1;
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 80px; align-items: center;
+  max-width: 1000px; width: 100%;
+}
+
+.photos-text {}
+.photos-text .s-label { text-align: left; }
+.photos-text .s-title { margin-bottom: 20px; text-align: left; }
+.photos-text p {
+  font-size: 0.85rem; line-height: 1.95; color: var(--c-dim);
+  max-width: 340px; margin-bottom: 32px;
+}
+
+/* Card stack */
+.stack {
+  width: 100%; max-width: 300px;
+  aspect-ratio: 3/4;
+  position: relative; margin: 0 auto;
+  touch-action: pan-y; user-select: none;
+}
+
+.card {
+  position: absolute; inset: 0;
+  border-radius: 4px; overflow: hidden;
+  cursor: grab;
+  will-change: transform;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04);
+}
+.card:active { cursor: grabbing; }
+.card img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+
+.card-cap {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 48px 20px 20px;
+  background: linear-gradient(0deg, rgba(14,11,13,0.94) 0%, transparent 100%);
+}
+.card-cap p {
+  font-family: 'EB Garamond', serif; font-style: italic;
+  font-size: 0.95rem; color: rgba(240,232,228,0.8);
+  margin: 0;
+}
+
+@keyframes flyL { to { transform: translateX(-160%) rotate(-22deg) scale(0.9); opacity: 0; } }
+@keyframes flyR { to { transform: translateX( 160%) rotate( 22deg) scale(0.9); opacity: 0; } }
+.fly-l { animation: flyL 0.38s cubic-bezier(0.4,0,1,1) forwards; }
+.fly-r { animation: flyR 0.38s cubic-bezier(0.4,0,1,1) forwards; }
+
+.stack-dots { display: flex; gap: 6px; margin-top: 16px; justify-content: center; }
+.sdot { width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.15); transition: all 0.3s; cursor: pointer; }
+.sdot.on { background: var(--c-rose); width: 16px; border-radius: 2px; }
+
+.drag-hint {
+  font-size: 0.48rem; letter-spacing: 0.3em; text-transform: uppercase;
+  color: var(--c-dimmer); text-align: center; margin-top: 12px;
+}
+
+/* ══════════════════════════════════════════════════
+   SECTION 4 — POEM
+══════════════════════════════════════════════════ */
+.s-poem {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; padding: 120px 48px;
+  overflow: hidden;
+}
+.s-poem::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 70% 55% at 50% 50%, rgba(196,86,106,0.06) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.poem-wrap {
+  position: relative; z-index: 1;
+  max-width: 680px; width: 100%;
+}
+
+/* Top rule */
+.poem-rule {
+  display: flex; align-items: center; gap: 20px; margin-bottom: 52px;
+}
+.poem-rule-line { flex: 1; height: 1px; background: rgba(255,255,255,0.06); }
+.poem-rule-diamond {
+  width: 5px; height: 5px;
+  background: var(--c-rose);
+  transform: rotate(45deg); flex-shrink: 0;
+}
+
+.poem-h {
+  font-family: 'EB Garamond', serif; font-style: italic;
+  font-size: clamp(2rem, 4vw, 3rem); font-weight: 400;
+  color: var(--c-cream); margin-bottom: 48px;
+  text-align: center;
+}
+
+.poem-stanza {
+  font-family: 'EB Garamond', serif; font-style: italic;
+  font-size: clamp(1rem, 1.8vw, 1.2rem);
+  line-height: 2.15; color: rgba(240,232,228,0.78);
+  font-weight: 400;
+  text-align: center; margin-bottom: 32px;
+}
+.poem-stanza:last-of-type { margin-bottom: 0; }
+
+.poem-sig {
+  text-align: right;
+  font-family: 'EB Garamond', serif; font-style: italic;
+  font-size: 0.9rem; color: var(--c-rose-lt);
+  margin-top: 52px; opacity: 0.8;
+}
+
+/* Bottom rule */
+.poem-rule-b {
+  display: flex; align-items: center; gap: 20px; margin-top: 52px;
+}
+
+/* ══════════════════════════════════════════════════
+   FOOTER
+══════════════════════════════════════════════════ */
+.s-footer {
+  min-height: 30vh;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; padding: 80px 48px;
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+.footer-inner { text-align: center; position: relative; z-index: 1; }
+.footer-inner p {
+  font-family: 'EB Garamond', serif; font-style: italic;
+  font-size: 0.9rem; color: var(--c-dimmer);
+  letter-spacing: 0.04em;
+}
+.footer-heart { display: block; font-size: 1.1rem; margin-bottom: 14px; opacity: 0.6; }
+
+/* ══════════════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════════════ */
+@media (max-width: 760px) {
+  .hero-inner   { grid-template-columns: 1fr; gap: 48px; text-align: center; }
+  .hero-p       { max-width: 100%; }
+  .hero-date    { justify-content: center; }
+  .hero-deco    { display: none; }
+  .photos-inner { grid-template-columns: 1fr; gap: 48px; }
+  .photos-text .s-label,
+  .photos-text .s-title { text-align: center; }
+  .photos-text p { max-width: 100%; text-align: center; }
+  .counter-row  { flex-wrap: wrap; gap: 1px; }
+  .c-unit       { min-width: 80px; }
+  .c-unit:first-child,
+  .c-unit:last-child { border-radius: 0; }
+  .s-hero, .s-counter, .s-photos, .s-poem { padding-left: 24px; padding-right: 24px; }
+  .player { padding: 0 16px; gap: 12px; }
+  .p-bar-wrap { max-width: 90px; }
+  .p-vol { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div id="rain"></div>
+
+<!-- ── PLAYER ──────────────────────────────────── -->
+<header class="player">
+  <div class="disc" id="disc"></div>
+  <div class="p-meta">
+    <div class="p-name" id="pName">Nuestra canción</div>
+    <div class="p-sub">para nosotros</div>
+  </div>
+  <div class="p-bar-wrap" id="pBarWrap">
+    <div class="p-bar" id="pBar"><div class="p-fill" id="pFill"></div></div>
+    <div class="p-times"><span id="pNow">0:00</span><span id="pTot">0:00</span></div>
+  </div>
+  <button class="p-btn" id="playBtn" onclick="togglePlay()">▶</button>
+  <div class="p-vol">
+    <span>♪</span>
+    <input type="range" id="vol" min="0" max="1" step="0.05" value="0.8" oninput="audio.volume=this.value">
+  </div>
+</header>
+
+<!-- 🎵 Cambia "cancion.mp3" por el nombre de tu archivo -->
+<audio id="audio" src="cancion.mp3" preload="auto" loop></audio>
+
+<!-- ══════════════════════════════════════════════
+     HERO
+══════════════════════════════════════════════ -->
+<section class="s-hero">
+  <div class="hero-inner">
+    <div class="hero-text">
+      <p class="hero-label">Una historia de amor</p>
+      <h1 class="hero-h1">Para ti,<br><em>mi amor</em><br>eterno</h1>
+      <p class="hero-p">Cada día a tu lado es el más bello que he vivido. Esto es para ti, porque mereces saberlo.</p>
+      <div class="hero-date">
+        <div class="hero-date-line"></div>
+        <span class="hero-date-text">Desde el 10 de marzo, 2025</span>
+      </div>
+    </div>
+    <div class="hero-deco">
+      <div class="hero-deco-ring">
+        <span class="hero-deco-char"></span>
+      </div>
+    </div>
+  </div>
+  <div class="scroll-indicator">
+    <span>scroll</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     COUNTER
+══════════════════════════════════════════════ -->
+<section class="s-counter">
+  <div class="counter-wrap">
+    <span class="s-label" data-reveal>tiempo juntos</span>
+    <h2 class="s-title" data-reveal>Cada segundo contigo<br>es un regalo</h2>
+    <div class="counter-row">
+      <div class="c-unit" data-reveal class="d1"><span class="c-n" id="cY">00</span><span class="c-l">Años</span></div>
+      <div class="c-unit d2" data-reveal><span class="c-n" id="cM">00</span><span class="c-l">Meses</span></div>
+      <div class="c-unit d3" data-reveal><span class="c-n" id="cD">00</span><span class="c-l">Días</span></div>
+      <div class="c-unit d4" data-reveal><span class="c-n" id="cH">00</span><span class="c-l">Horas</span></div>
+      <div class="c-unit d5" data-reveal><span class="c-n" id="cMin">00</span><span class="c-l">Min</span></div>
+      <div class="c-unit d6" data-reveal><span class="c-n" id="cS">00</span><span class="c-l">Seg</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     PHOTOS
+══════════════════════════════════════════════ -->
+<section class="s-photos">
+  <div class="photos-inner">
+    <div class="photos-text" data-reveal="left">
+      <span class="s-label">tus momentos</span>
+      <h2 class="s-title">que me encantan</h2>
+      <p>Cada foto guarda un momento que ya es parte de mí.</p>
+    </div>
+    <div data-reveal="right">
+      <div class="stack" id="stack">
+        <div class="card">
+          <img src="https://i.ibb.co/8nQ4hGsR/3.jpg" alt="">
+          <div class="card-cap"><p>El primer día que te vi...</p></div>
+        </div>
+        <div class="card">
+          <img src="https://i.ibb.co/3mDcXmS6/2.jpg" alt="">
+          <div class="card-cap"><p>Contigo, todo tiene sentido</p></div>
+        </div>
+        <div class="card">
+          <img src="https://i.ibb.co/BVsT8pb1/1.jpg" alt="">
+          <div class="card-cap"><p>Mi lugar favorito: a tu lado</p></div>
+        </div>
+        <div class="card">
+          <img src="https://i.ibb.co/cKj32ty0/image.jpg" alt="">
+          <div class="card-cap"><p>Para siempre y más</p></div>
+        </div>
+        <div class="card">
+          <img src="https://i.ibb.co/hJDvnTYx/image.jpg" alt="">
+          <div class="card-cap"><p>Tú eres mi historia favorita</p></div>
+        </div>
+      </div>
+      <div class="stack-dots" id="sdots"></div>
+      <p class="drag-hint">arrastra para cambiar</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     POEM
+══════════════════════════════════════════════ -->
+<section class="s-poem">
+  <div class="poem-wrap">
+    <div class="poem-rule" data-reveal>
+      <div class="poem-rule-line"></div>
+      <div class="poem-rule-diamond"></div>
+      <div class="poem-rule-line"></div>
+    </div>
+
+    <h2 class="poem-h" data-reveal>Para ti</h2>
+
+    <p class="poem-stanza" data-reveal>
+      En cada mirada tuya encontré<br>
+      el universo que nunca busqué,<br>
+      un hogar en tus ojos, un alba en tu voz,<br>
+      y el mundo más bello cuando estamos los dos.
+    </p>
+
+    <p class="poem-stanza d2" data-reveal>
+      Eres la calma después de la tormenta,<br>
+      la canción que mi alma siempre inventa,<br>
+      el nombre que escribo sin querer,<br>
+      el amor más bonito que vine a tener.
+    </p>
+
+    <p class="poem-stanza d3" data-reveal>
+      Gracias por existir, por quedarte,<br>
+      por elegirme y dejarme amarte.<br>
+      Hoy y siempre, en cada latido,<br>
+      eres tú lo más bello que me ha pasado en la vida.
+    </p>
+
+    <p class="poem-sig" data-reveal>— Con todo mi amor ❤</p>
+
+    <div class="poem-rule-b" data-reveal>
+      <div class="poem-rule-line"></div>
+      <div class="poem-rule-diamond"></div>
+      <div class="poem-rule-line"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     FOOTER
+══════════════════════════════════════════════ -->
+<footer class="s-footer">
+  <div class="footer-inner" data-reveal>
+    <span class="footer-heart">❤</span>
+    <p>Hecho con amor, solo para ti</p>
+  </div>
+</footer>
+
+<script>
+// ══════════════════════════════════════
+//  🔧  EDITA AQUÍ
+// ══════════════════════════════════════
+const START = new Date('2025-03-10T00:00:00');
+const EMOJIS = ['❤', '♡'];
+// ══════════════════════════════════════
+
+// ── EMOJI RAIN ──────────────────────
+const rain = document.getElementById('rain');
+for (let i = 0; i < 18; i++) {
+  const d = document.createElement('div');
+  d.className = 'drop';
+  d.textContent = EMOJIS[i % EMOJIS.length];
+  d.style.left   = (Math.random() * 100) + 'vw';
+  d.style.fontSize = (0.7 + Math.random() * 0.6) + 'rem';
+  d.style.animationDuration  = (10 + Math.random() * 14) + 's';
+  d.style.animationDelay     = (-Math.random() * 16) + 's';
+  d.style.opacity = 0.3 + Math.random() * 0.35;
+  rain.appendChild(d);
+}
+
+// ── SCROLL REVEAL ───────────────────
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); } });
+}, { threshold: 0.12 });
+document.querySelectorAll('[data-reveal]').forEach(el => obs.observe(el));
+
+// ── COUNTER ─────────────────────────
+function pad(n) { return String(n).padStart(2,'0'); }
+function tick() {
+  const now = new Date(), diff = now - START;
+  if (diff < 0) return;
+  const s   = Math.floor(diff / 1000);
+  const sec = s % 60, min = Math.floor(s/60) % 60, hr = Math.floor(s/3600) % 24;
+  let y = now.getFullYear() - START.getFullYear();
+  let mo = now.getMonth() - START.getMonth();
+  let d  = now.getDate()  - START.getDate();
+  if (d < 0) { mo--; d += new Date(now.getFullYear(), now.getMonth(), 0).getDate(); }
+  if (mo< 0) { y--;  mo += 12; }
+  document.getElementById('cY').textContent   = pad(y);
+  document.getElementById('cM').textContent   = pad(mo);
+  document.getElementById('cD').textContent   = pad(d);
+  document.getElementById('cH').textContent   = pad(hr);
+  document.getElementById('cMin').textContent = pad(min);
+  document.getElementById('cS').textContent   = pad(sec);
+}
+tick(); setInterval(tick, 1000);
+
+// ── AUDIO ───────────────────────────
+const audio   = document.getElementById('audio');
+const playBtn = document.getElementById('playBtn');
+const disc    = document.getElementById('disc');
+const pFill   = document.getElementById('pFill');
+const pBar    = document.getElementById('pBar');
+const pBarWrap= document.getElementById('pBarWrap');
+const pNow    = document.getElementById('pNow');
+const pTot    = document.getElementById('pTot');
+
+const fmt = s => Math.floor(s/60) + ':' + String(Math.floor(s%60)).padStart(2,'0');
+
+function togglePlay() {
+  if (audio.paused) { audio.play(); playBtn.textContent='⏸'; disc.classList.add('on'); }
+  else              { audio.pause(); playBtn.textContent='▶'; disc.classList.remove('on'); }
+}
+
+let played = false;
+const tryPlay = () => {
+  if (played) return; played = true;
+  audio.play().then(() => { playBtn.textContent='⏸'; disc.classList.add('on'); }).catch(()=>{});
+};
+document.addEventListener('click',      tryPlay, { once:true });
+document.addEventListener('touchstart', tryPlay, { once:true });
+
+audio.addEventListener('loadedmetadata', () => { pTot.textContent = fmt(audio.duration); pBarWrap.style.display='flex'; });
+audio.addEventListener('timeupdate', () => {
+  if (!audio.duration) return;
+  pFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  pNow.textContent  = fmt(audio.currentTime);
+});
+audio.addEventListener('ended', () => { playBtn.textContent='▶'; disc.classList.remove('on'); });
+pBar.addEventListener('click', e => {
+  if (!audio.duration) return;
+  const r = pBar.getBoundingClientRect();
+  audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
+});
+
+// ── STACKED CARDS ───────────────────
+(function(){
+  const el   = document.getElementById('stack');
+  const dotsEl = document.getElementById('sdots');
+  const cards = Array.from(el.querySelectorAll('.card'));
+  let q = [...cards].reverse();
+
+  cards.forEach(() => {
+    const d = document.createElement('div');
+    d.className = 'sdot';
+    dotsEl.appendChild(d);
+  });
+
+  function render() {
+    q.forEach((c, i) => {
+      c.className = 'card';
+      c.style.transition = '';
+      if (i === 0) {
+        Object.assign(c.style, { zIndex:10, transform:'rotate(0deg) translateY(0) scale(1)', opacity:'1' });
+      } else if (i === 1) {
+        Object.assign(c.style, { zIndex:1, transform:'rotate(3.5deg) translateY(8px) scale(0.965)', opacity:'1', transition:'transform 0.4s cubic-bezier(0.16,1,0.3,1)' });
+      } else if (i === 2) {
+        Object.assign(c.style, { zIndex:0, transform:'rotate(-2.5deg) translateY(16px) scale(0.93)', opacity:'1', transition:'transform 0.4s cubic-bezier(0.16,1,0.3,1)' });
+      } else {
+        Object.assign(c.style, { zIndex:0, transform:'rotate(-2.5deg) translateY(16px) scale(0.93)', opacity:'0' });
+      }
+    });
+    const ti = cards.indexOf(q[0]);
+    dotsEl.querySelectorAll('.sdot').forEach((d,i) => d.classList.toggle('on', i===ti));
+  }
+
+  function dismiss(dir) {
+    const top = q[0];
+    top.style.transition = 'none';
+    void top.offsetWidth;
+    top.classList.add(dir > 0 ? 'fly-r' : 'fly-l');
+    if (q[1]) { Object.assign(q[1].style, { transition:'transform 0.4s cubic-bezier(0.16,1,0.3,1)', transform:'rotate(0deg) translateY(0) scale(1)', zIndex:9 }); }
+    if (q[2]) { Object.assign(q[2].style, { transition:'transform 0.4s cubic-bezier(0.16,1,0.3,1)', transform:'rotate(3.5deg) translateY(8px) scale(0.965)' }); }
+    setTimeout(() => {
+      top.classList.remove('fly-l','fly-r');
+      top.style.opacity='0';
+      q.shift(); q.push(top);
+      render();
+    }, 400);
+  }
+
+  let sx=0, dx=0, drag=false;
+  const onS = x => { drag=true; sx=x; dx=0; q[0].style.transition='none'; };
+  const onM = x => { if (!drag) return; dx=x-sx; q[0].style.transform=`translateX(${dx}px) rotate(${dx*0.065}deg) scale(1)`; };
+  const onE = () => {
+    if (!drag) return; drag=false;
+    if (Math.abs(dx) > 50) dismiss(dx);
+    else { q[0].style.transition='transform 0.45s cubic-bezier(0.34,1.56,0.64,1)'; q[0].style.transform='rotate(0deg) translateY(0) scale(1)'; }
+    dx=0;
+  };
+  el.addEventListener('mousedown',  e => onS(e.clientX));
+  window.addEventListener('mousemove', e => onM(e.clientX));
+  window.addEventListener('mouseup', onE);
+  el.addEventListener('touchstart', e => onS(e.touches[0].clientX), {passive:true});
+  el.addEventListener('touchmove',  e => onM(e.touches[0].clientX), {passive:true});
+  el.addEventListener('touchend', onE);
+  render();
+})();
+</script>
+</body>
+</html>
